@@ -1,4 +1,3 @@
-import axios from "axios";
 import {
   BriefcaseIcon,
   BuildingIcon,
@@ -8,11 +7,12 @@ import {
   PhoneIcon,
   UserIcon,
 } from "lucide-react";
-import React, { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import React, { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom"; // Add this import
+import axiosInstance from "../api/axios";
 
 const VisitorRegistration = () => {
-  const navigate = useNavigate();
+  const navigate = useNavigate(); // Use the hook
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     names: "",
@@ -20,11 +20,49 @@ const VisitorRegistration = () => {
     phone: "",
     purpose: "",
     departmentToVisit: "",
-    visitDate: new Date().toISOString().split("T")[0],
-    arrivalTime: new Date().toTimeString().split(" ")[0].slice(0, 5),
+    visitDate: "",
+    arrivalTime: "",
   });
 
+  // Update date and time every second
+  useEffect(() => {
+    const updateDateTime = () => {
+      const now = new Date();
+      // Convert to Africa/Kigali timezone
+      const kigaliTime = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Africa/Kigali",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        hour12: false,
+      }).format(now);
+
+      const [datePart, time] = kigaliTime.split(", ");
+      const [month, day, year] = datePart.split("/");
+      const formattedDate = `${year}-${month}-${day}`;
+
+      setFormData((prevData) => ({
+        ...prevData,
+        visitDate: formattedDate,
+        arrivalTime: time,
+      }));
+    };
+
+    updateDateTime();
+    const timer = setInterval(updateDateTime, 1000);
+
+    return () => clearInterval(timer);
+  }, []);
+
   const departments = [
+    "Reception",
+    "Finance",
+    "HRH",
+    "PBF",
+    "Internal Auditor",
+    "Procurement",
     "Human Resources",
     "Health Workforce Development",
     "Planning and Health Financing Department",
@@ -33,35 +71,58 @@ const VisitorRegistration = () => {
     "Clinical Service Department",
     "Minister's Office",
     "Digitization",
+    "S.P.I.U",
+    "CCM",
+    "Internal Legal",
   ];
 
   const handleInputChange = (
     e: React.ChangeEvent<HTMLInputElement | HTMLSelectElement>
   ) => {
     const { name, value } = e.target;
-    setFormData({ ...formData, [name]: value });
+    if (name === "idNumber") {
+      // Limit ID number to 16 digits
+      const limitedValue = value.slice(0, 16);
+      setFormData({ ...formData, [name]: limitedValue });
+    } else if (name === "phone") {
+      // Limit phone number to 10 digits
+      const limitedValue = value.replace(/\D/g, "").slice(0, 10);
+      setFormData({ ...formData, [name]: limitedValue });
+    } else {
+      setFormData({ ...formData, [name]: value });
+    }
   };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setIsLoading(true);
     try {
+      const now = new Date();
+      const kigaliTime = new Intl.DateTimeFormat("en-US", {
+        timeZone: "Africa/Kigali",
+        year: "numeric",
+        month: "2-digit",
+        day: "2-digit",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false,
+      }).format(now);
+
+      const [datePart, timePart] = kigaliTime.split(", ");
+      const [month, day, year] = datePart.split("/");
+      const formattedDate = `${year}-${month}-${day}`;
+
       const visitorData = {
         ...formData,
-        visitDate: formData.visitDate,
-        arrivalTime: formData.arrivalTime,
+        visitDate: formattedDate,
+        arrivalTime: timePart,
       };
-      const response = await axios.post(
-        "http://localhost:8080/api/visitors/register",
-        visitorData,
-        {
-          headers: {
-            "Content-Type": "application/json",
-          },
-        }
+      const response = await axiosInstance.post(
+        "/visitors/register",
+        visitorData
       );
       console.log("Visitor registered:", response.data);
-      // Show success message
       alert("Visitor registered successfully!");
       // Reset form
       setFormData({
@@ -71,7 +132,10 @@ const VisitorRegistration = () => {
         purpose: "",
         departmentToVisit: "",
         visitDate: new Date().toISOString().split("T")[0],
-        arrivalTime: new Date().toTimeString().split(" ")[0].slice(0, 5),
+        arrivalTime: new Date().toLocaleTimeString("en-GB", {
+          hour: "2-digit",
+          minute: "2-digit",
+        }),
       });
       // Redirect to the landing page after a short delay
       setTimeout(() => navigate("/"), 2000);
@@ -121,6 +185,7 @@ const VisitorRegistration = () => {
               required
               pattern="\d{16}"
               title="ID number must be exactly 16 digits"
+              maxLength={16}
             />
           </div>
 
@@ -133,12 +198,13 @@ const VisitorRegistration = () => {
               className="pl-10 w-full p-3 bg-gray-50 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
               type="tel"
               name="phone"
-              placeholder="Phone Number"
+              placeholder="Phone Number (10 digits)"
               value={formData.phone}
               onChange={handleInputChange}
               required
-              pattern="^\+?[0-9]{10,14}$"
-              title="Phone number must be between 10 and 14 digits"
+              pattern="\d{10}"
+              title="Phone number must be exactly 10 digits"
+              maxLength={10}
             />
           </div>
 
@@ -191,8 +257,7 @@ const VisitorRegistration = () => {
               type="date"
               name="visitDate"
               value={formData.visitDate}
-              onChange={handleInputChange}
-              required
+              readOnly
             />
           </div>
 
@@ -206,8 +271,7 @@ const VisitorRegistration = () => {
               type="time"
               name="arrivalTime"
               value={formData.arrivalTime}
-              onChange={handleInputChange}
-              required
+              readOnly
             />
           </div>
 

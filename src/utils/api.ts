@@ -1,57 +1,73 @@
 import axios from "axios";
 import { Visitor } from "../types/Visitor";
 
-// Create an Axios instance with the base URL for your backend
-const api = axios.create({
-  baseURL: "http://localhost:8080/api", // Make sure this matches your backend's base URL
-  headers: {
-    "Content-Type": "application/json",
-  },
+const instance = axios.create({
+  baseURL: process.env.REACT_APP_API_URL || "http://10.10.35.50:8080/api",
+  withCredentials: false,
 });
 
-// Function to register a new visitor
-export const registerVisitor = async (visitor: Visitor): Promise<Visitor> => {
+const handleError = (error: any) => {
+  console.error(
+    "API Error:",
+    error.response ? error.response.data : error.message
+  );
+  throw error;
+};
+
+export const getAllVisitors = async (): Promise<Visitor[]> => {
   try {
-    const response = await api.post<Visitor>("/visitors/register", visitor);
+    const response = await instance.get<Visitor[]>("/visitors");
     return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    return handleError(error);
   }
 };
 
-// Function to search for visitors by name
 export const searchVisitors = async (name: string): Promise<Visitor[]> => {
   try {
-    const response = await api.get<Visitor[]>(`/visitors/search?name=${name}`);
+    const response = await instance.get<Visitor[]>(
+      `/visitors/search?name=${name}`
+    );
     return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    return handleError(error);
   }
 };
 
-// Function to record a visitor's departure time
 export const recordDeparture = async (id: number): Promise<Visitor> => {
   try {
-    const response = await api.put<Visitor>(`/visitors/${id}/departure`);
+    const response = await instance.put<Visitor>(`/visitors/${id}/departure`);
     return response.data;
   } catch (error) {
-    handleApiError(error);
-    throw error;
+    return handleError(error);
   }
 };
 
-// Function to handle and log API errors
-const handleApiError = (error: any) => {
-  if (error.response) {
-    // Server responded with a status code outside the 2xx range
-    console.error("API Error:", error.response.data);
-  } else if (error.request) {
-    // No response received from the server
-    console.error("API Error: No response from server");
-  } else {
-    // Something else caused the error
-    console.error("API Error:", error.message);
+export const registerVisitor = async (visitor: Visitor): Promise<Visitor> => {
+  try {
+    const response = await instance.post<Visitor>(
+      "/visitors/register",
+      visitor
+    );
+    return response.data;
+  } catch (error) {
+    return handleError(error);
   }
 };
+
+export const updateVisitor = async (
+  id: number,
+  visitorData: Partial<Visitor>
+): Promise<Visitor> => {
+  try {
+    const response = await instance.put<Visitor>(
+      `/visitors/${id}`,
+      visitorData
+    );
+    return response.data;
+  } catch (error) {
+    return handleError(error);
+  }
+};
+
+export default instance;

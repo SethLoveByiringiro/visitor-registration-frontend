@@ -7,11 +7,14 @@ import { useAuth } from "../contexts/AuthContext";
 const LandingPage: React.FC = () => {
   const navigate = useNavigate();
   const { isAuthenticated, isLoading } = useAuth();
-  const registrationUrl = `${window.location.origin}/register`;
+
+  // Use an environment variable or the public IP for external access
+  const baseUrl =
+    process.env.REACT_APP_PUBLIC_URL || "http://197.243.60.141:3000";
+  const registrationUrl = `${baseUrl}/register`;
 
   const handleReceptionistLogin = () => {
     if (isLoading) {
-      // Optional: You could show a loading indicator here
       return;
     }
     if (isAuthenticated) {
@@ -20,7 +23,6 @@ const LandingPage: React.FC = () => {
       navigate("/login");
     }
   };
-
   return (
     <div className="flex items-center justify-center min-h-screen bg-gradient-to-br from-blue-500 to-purple-600 p-4">
       <div className="bg-white rounded-xl shadow-2xl p-8 max-w-md w-full mx-auto">
